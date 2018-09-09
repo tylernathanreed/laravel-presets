@@ -17,8 +17,8 @@ class Reedware extends Preset
 	{
 		static::updatePackages();
 		static::updateWebpackConfiguration();
-		static::updateScripts();
-		static::updateJavaScriptBootstrapping();
+        static::updateScripts();
+		static::updateStyles();
 	}
 
 	/** 
@@ -105,6 +105,17 @@ class Reedware extends Preset
     public static function updateJavaScriptBootstrapping()
     {
         static::copyStub('bootstrap.js', resource_path('js/bootstrap.js'));
+    }
+
+    /**
+     * Update the css style files.
+     *
+     * @return void
+     */
+    public static function updateStyles()
+    {
+        File::cleanDirectory(resource_path('assets/sass'));
+        File::put(resource_path('assets/sass/app.scss'), '');
     }
 
     /**
