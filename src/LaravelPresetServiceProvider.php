@@ -15,7 +15,13 @@ class LaravelPresetServiceProvider extends ServiceProvider
     public function boot()
     {
         PresetCommand::macro('reedware', function($command) {
-            Reedware::install();
+
+            // Set the application instance
+            Reedware::setApplication($this->app);
+
+            // Install the preset
+            Reedware::install($command);
+
         });
     }
 }

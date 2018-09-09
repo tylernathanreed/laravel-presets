@@ -2,132 +2,168 @@
 
 namespace Reedware\LaravelPresets;
 
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\File;
 use Illuminate\Foundation\Console\Presets\Preset;
 
 class Reedware extends Preset
 {
+    use Concerns\UpdatesBlade,
+        Concerns\UpdatesComposer,
+        Concerns\UpdatesEvents,
+        Concerns\UpdatesGitIgnore,
+        Concerns\UpdatesHelpers,
+        Concerns\UpdatesModels,
+        Concerns\UpdatesPackages,
+        Concerns\UpdatesScripts,
+        Concerns\UpdatesStyles,
+        Concerns\UpdatesWebpack,
+        Concerns\UsesApplication,
+        Concerns\UsesOutput,
+        Concerns\UsesStubs;
+
+    /**
+     * The application instance.
+     *
+     * @var \Illuminate\Contracts\Foundation\Application
+     */
+    protected static $app;
+
+    /** 
+     * The output to write messages to.
+     *
+     * @var \Closure
+     */
+    protected static $output;
+
 	/**
 	 * Installs the reedware preset.
 	 *
+     * @param  \Illuminate\Console\Command  $command
+     *
 	 * @return void
 	 */
-	public static function install()
+	public static function install($command)
 	{
-		static::updatePackages();
-		static::updateWebpackConfiguration();
-        static::updateScripts();
-		static::updateStyles();
+        // Make sure the application instance exists
+        static::ensureApplicationInstanceExists();
+
+        // Set the output
+        static::setOutput(function($message) use ($command) {
+            $command->info($message);
+        });
+
+        // Perform the steps
+        static::performSteps([
+            'updateGitIgnore' => 'Updating ".gitignore"',
+            'updateComposer' => 'Updating "composer.json"',
+            'updatePackages' => 'Updating "package.json"',
+            'updateWebpackConfiguration' => 'Updating "webpack.mix.js"',
+            'updateScripts' => 'Updating javascript assets',
+            'updateStyles' => 'Updating css assets',
+            'updateEvents' => 'Updating events',
+            'updateBlade' => 'Updating blade directives',
+            'updateModels' => 'Updating models',
+            'updateViews' => 'Updating views',
+            'updateHelpers' => 'Updating helpers',
+        ]);
+
+        static::output('Please remember to run "composer dump-autoload"!');
 	}
 
-	/** 
-	 * Updates the "packages.json" file for the project.
-	 *
-	 * @param  array  $packages  The current list of packages.
-	 *
-	 * @return array
-	 */
-	public static function updatePackageArray($packages)
-	{
-		return array_merge(
-			static::getPackagesToInclude(),
-			Arr::except($packages, static::getPackagesToRemove())
-		);
-	}
-
-	/**
-	 * Returns the packages to include.
-	 *
-	 * @return array
-	 */
-	public static function getPackagesToInclude()
-	{
-		return [
-			'laravel-mix-tailwind' => '^0.1.0'
-		];
-	}
-
-	/**
-	 * Returns the packages to remove.
-	 *
-	 * @return array
-	 */
-	public static function getPackagesToRemove()
-	{
-		return [
-			'popper.js',
-			'lodash',
-			'jquery',
-			'bootstrap',
-            'babel-preset-react',
-            'react',
-            'react-dom',
-		];
-	}
-
-    /**
-     * Update the Webpack configuration.
-     *
-     * @return void
-     */
-    public static function updateWebpackConfiguration()
+    public static function updateViews()
     {
-        static::copyStub('webpack.mix.js', base_path('webpack.mix.js'));
+        File::delete(resource_path('views/welcome.blade.php'));
+
+        static::ensureDirectoryExists(resource_path('views/layouts'));
+        static::ensureDirectoryExists(resource_path('views/partials'));
+        static::ensureDirectoryExists(resource_path('views/pages'));
+
+        static::copyStub('web.blade.php', resource_path('views/layouts/web.blade.php'));
+        static::copyStub('app.blade.php', resource_path('views/layouts/app.blade.php'));
+        static::copyStub('page.blade.php', resource_path('views/layouts/page.blade.php'));
+        static::copyStub('header.blade.php', resource_path('views/partials/header.blade.php'));
+        static::copyStub('welcome.blade.php', resource_path('views/pages/welcome.blade.php'));
+
+        static::copyStub('web.php', base_path('routes/web.php'));
     }
 
     /**
-     * Update the java script files.
+     * Performs the specified steps.
+     *
+     * @param  array  $steps
      *
      * @return void
      */
-    public static function updateScripts()
+    protected static function performSteps($steps)
     {
-        static::updateJavaScriptBase();
-        static::updateJavaScriptBootstrapping();
+        // Determine the total count
+        $total = count($steps);
+
+        // Initialize the index
+        $index = 1;
+
+        // Output "Applying Preset"
+        static::output('Applying preset...');
+
+        // Iterate through each step
+        foreach($steps as $method => $message) {
+
+            // Perform the step
+            static::{$method}();
+
+            // Output the message
+            static::output(" - [{$index} / {$total}] {$message}");
+
+            // Increment the index
+            $index++;
+
+        }
+
+        // Output "Done!"
+        static::output('Done!');
     }
 
     /**
-     * Update the javascript app file.
+     * Replaces the namespace within the specified filepath.
+     *
+     * @param  string  $path
+     * @param  string  $from
+     * @param  string  $to
      *
      * @return void
      */
-    public static function updateJavaScriptBase()
+    protected static function replaceNamespace($path, $from, $to)
     {
-        static::copyStub('app.js', resource_path('js/app.js'));
+        $search = [
+            $from . '\\',
+            'namespace ' . $from . ';',
+        ];
+
+        $replace = [
+            $to . '\\',
+            'namespace ' . $to . ';',
+        ];
+
+        static::replaceIn($path, $search, $replace);
     }
 
     /**
-     * Update the javascript bootstrap file.
+     * Replace the given string in the given file.
+     *
+     * @param  string        $path
+     * @param  string|array  $search
+     * @param  string|array  $replace
      *
      * @return void
      */
-    public static function updateJavaScriptBootstrapping()
+    protected static function replaceIn($path, $search, $replace)
     {
-        static::copyStub('bootstrap.js', resource_path('js/bootstrap.js'));
-    }
+        // Make sure the file exists
+        if(!File::exists($path)) {
+            return;
+        }
 
-    /**
-     * Update the css style files.
-     *
-     * @return void
-     */
-    public static function updateStyles()
-    {
-        File::cleanDirectory(resource_path('sass'));
-        File::put(resource_path('sass/app.scss'), '');
-    }
-
-    /**
-     * Copies the specified stub to the given destination.
-     *
-     * @param  string  $stub
-     * @param  string  $destination
-     *
-     * @return void
-     */
-    protected static function copyStub($stub, $destination)
-    {
-    	copy(__DIR__ . "/stubs/{$stub}", $destination);
+        // Replace the search string
+        File::put($path, str_replace($search, $replace, File::get($path)));
     }
 }
