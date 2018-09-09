@@ -114,8 +114,8 @@ class Reedware extends Preset
      */
     public static function updateStyles()
     {
-        File::cleanDirectory(resource_path('assets/sass'));
-        File::put(resource_path('assets/sass/app.scss'), '');
+        File::cleanDirectory(resource_path('sass'));
+        File::put(resource_path('sass/app.scss'), '');
     }
 
     /**
