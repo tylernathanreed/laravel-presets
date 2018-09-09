@@ -1,0 +1,26 @@
+{
+    "name": "reedware/laravel-presets",
+    "description": "The default laravel preset for the majority of my projects.",
+    "keywords": ["laravel", "preset", "reedware"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Tyler Reed",
+            "email": "tylernathanreed@gmail.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "autoload": {
+        "psr-4": {
+            "Reedware\\LaravelPresets\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Reedware\\LaravelPresets\\LaravelPresetServiceProvider"
+            ]
+        }
+    },
+    "require": {}
+}
